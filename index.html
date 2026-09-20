@@ -3,198 +3,352 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sentinel Security Console</title>
+  <title>Sentinel Lab — Incident Simulator</title>
   <style>
     :root {
-      --bg: #07110d;
-      --panel: #0d1d16;
-      --green: #35f28b;
-      --warn: #ffc857;
-      --red: #ff5d73;
-      --text: #d9ffe8;
-      --muted: #78a18a;
+      --bg:#060b10; --panel:#0b141c; --panel2:#101f2a; --line:#244354;
+      --text:#d8edf7; --muted:#78a0b5; --green:#45f5a3; --yellow:#ffc857;
+      --red:#ff5d73; --blue:#59b7ff;
     }
-
-    * { box-sizing: border-box; }
-
+    * { box-sizing:border-box; }
     body {
-      margin: 0;
-      min-height: 100vh;
-      background: radial-gradient(circle at top, #123728, var(--bg) 58%);
-      color: var(--text);
-      font: 15px/1.5 Consolas, "Courier New", monospace;
+      margin:0; min-height:100vh; color:var(--text);
+      font:14px/1.45 Consolas,"Courier New",monospace;
+      background:radial-gradient(circle at top,#13374b 0,var(--bg) 55%);
     }
-
     header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px 7vw;
-      border-bottom: 1px solid #1c4b34;
-      background: rgba(4, 15, 10, .9);
+      display:flex; justify-content:space-between; align-items:center; gap:20px;
+      padding:16px 4vw; border-bottom:1px solid var(--line);
+      background:rgba(4,12,17,.94);
     }
+    h1 { margin:0; font-size:1rem; letter-spacing:.13em; }
+    .status { color:var(--green); }
+    .top-stats { display:flex; gap:20px; color:var(--muted); }
+    .top-stats strong { color:var(--text); }
 
-    h1 { margin: 0; font-size: 1.2rem; letter-spacing: .12em; }
-    .status { color: var(--green); }
-    .wrap { max-width: 1100px; margin: 36px auto; padding: 0 20px; }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 1.1fr .9fr;
-      gap: 20px;
+    .layout {
+      max-width:1450px; margin:0 auto; padding:22px;
+      display:grid; grid-template-columns:260px 1fr 310px; gap:16px;
     }
-
     .panel {
-      background: rgba(13, 29, 22, .92);
-      border: 1px solid #245b40;
-      border-radius: 10px;
-      padding: 22px;
-      box-shadow: 0 0 30px rgba(53, 242, 139, .06);
+      background:rgba(11,20,28,.94); border:1px solid var(--line);
+      border-radius:9px; padding:16px;
     }
-
-    h2 { margin-top: 0; font-size: 1rem; color: var(--green); }
-    .metric { font-size: 2rem; font-weight: bold; }
-    .muted { color: var(--muted); }
-
-    .nodes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    .node { border: 1px solid #285f44; padding: 12px; border-radius: 7px; }
-    .node small { display: block; color: var(--muted); margin-top: 5px; }
-
+    h2 { color:var(--blue); font-size:.88rem; margin:0 0 12px; letter-spacing:.08em; }
     button {
-      width: 100%;
-      margin-top: 12px;
-      padding: 12px;
-      color: #02120a;
-      font: inherit;
-      font-weight: bold;
-      background: var(--green);
-      border: 0;
-      border-radius: 6px;
-      cursor: pointer;
+      width:100%; padding:10px; margin:5px 0; border:1px solid #35647c;
+      border-radius:5px; background:#102b3a; color:var(--text);
+      font:inherit; cursor:pointer; text-align:left;
     }
+    button:hover:not(:disabled) { background:#16445a; border-color:var(--blue); }
+    button:disabled { opacity:.42; cursor:not-allowed; }
+    .danger { border-color:#803443; color:#ffabb7; }
+    .good { border-color:#2b7458; color:#8dffd0; }
 
-    button:hover { filter: brightness(1.1); }
-    button:disabled { background: #426552; cursor: not-allowed; }
+    .objective {
+      margin:8px 0; padding:8px; border-left:3px solid #3a5666;
+      color:var(--muted); font-size:.82rem;
+    }
+    .objective.done { border-color:var(--green); color:var(--green); }
+    .objective.done::before { content:"✓ "; }
+
+    .map {
+      min-height:440px; display:grid; grid-template-columns:repeat(3,1fr);
+      gap:16px; align-content:center;
+    }
+    .node {
+      position:relative; min-height:112px; padding:15px; border-radius:8px;
+      border:1px solid #326177; background:#0c202b; cursor:pointer;
+      transition:.2s;
+    }
+    .node:hover, .node.selected { transform:translateY(-2px); border-color:var(--blue); }
+    .node .name { font-weight:bold; }
+    .node small { display:block; color:var(--muted); margin-top:8px; }
+    .dot {
+      display:inline-block; width:8px; height:8px; margin-right:6px;
+      border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green);
+    }
+    .node.warning .dot { background:var(--yellow); box-shadow:0 0 8px var(--yellow); }
+    .node.compromised .dot { background:var(--red); box-shadow:0 0 8px var(--red); }
+    .node.isolated { opacity:.55; border-style:dashed; }
 
     #terminal {
-      height: 310px;
-      overflow-y: auto;
-      padding: 15px;
-      background: #030a06;
-      border: 1px solid #1d4a34;
-      border-radius: 7px;
-      white-space: pre-wrap;
+      min-height:260px; max-height:360px; overflow:auto; background:#03080c;
+      border:1px solid #1d3a49; border-radius:6px; padding:12px;
+      white-space:pre-wrap; font-size:.84rem;
     }
+    .ok { color:var(--green); } .warn { color:var(--yellow); } .bad { color:var(--red); }
+    .info { color:var(--blue); }
 
-    .line-ok { color: var(--green); }
-    .line-warn { color: var(--warn); }
-    .line-danger { color: var(--red); }
-
-    .flag {
-      display: none;
-      margin-top: 18px;
-      padding: 14px;
-      color: #06130b;
-      background: var(--warn);
-      border-radius: 7px;
-      font-weight: bold;
+    .alert {
+      border-left:3px solid var(--yellow); padding:10px; margin-bottom:8px;
+      background:#14232a; font-size:.82rem;
     }
+    .alert.critical { border-color:var(--red); }
+    .alert.resolved { opacity:.45; border-color:var(--green); }
+    .metric { margin:13px 0; }
+    .bar { height:8px; background:#1c3442; border-radius:4px; overflow:hidden; margin-top:5px; }
+    .fill { height:100%; transition:.3s; }
+    #riskBar { background:var(--red); width:12%; }
+    #detectBar { background:var(--blue); width:30%; }
 
-    @media (max-width: 750px) {
-      .grid { grid-template-columns: 1fr; }
-      .nodes { grid-template-columns: 1fr; }
+    .banner {
+      display:none; margin:0 0 16px; padding:13px; border:1px solid var(--green);
+      color:var(--green); background:#0b2b20; border-radius:7px;
     }
+    .detail { color:var(--muted); font-size:.84rem; min-height:90px; }
+    @media(max-width:980px) { .layout { grid-template-columns:1fr; } .map { min-height:auto; } }
   </style>
 </head>
 <body>
-  <header>
-    <h1>◈ SENTINEL // SECURITY OPERATIONS</h1>
-    <div class="status">● SYSTEMS ONLINE</div>
-  </header>
+<header>
+  <h1>◈ SENTINEL LAB // INCIDENT RESPONSE SIMULATOR</h1>
+  <div class="top-stats">
+    <span>Score: <strong id="score">0</strong></span>
+    <span>Risk: <strong id="riskText">LOW</strong></span>
+    <span class="status">● LOCAL TRAINING MODE</span>
+  </div>
+</header>
 
-  <main class="wrap">
-    <div class="grid">
-      <section class="panel">
-        <h2>NETWORK OVERVIEW</h2>
-        <div class="nodes">
-          <div class="node">WEB-01 <small class="status">● ONLINE</small></div>
-          <div class="node">AUTH-02 <small class="status">● ONLINE</small></div>
-          <div class="node">DB-CORE <small class="status">● ONLINE</small></div>
-        </div>
+<main class="layout">
+  <aside class="panel">
+    <h2>MISSION OBJECTIVES</h2>
+    <div class="objective" id="oScan">Discover affected systems</div>
+    <div class="objective" id="oReview">Review the security alert</div>
+    <div class="objective" id="oEvidence">Collect investigation evidence</div>
+    <div class="objective" id="oIsolate">Isolate the affected system</div>
+    <div class="objective" id="oPatch">Patch the vulnerable service</div>
+    <div class="objective" id="oRotate">Rotate demo credentials</div>
 
-        <p class="muted">Threat level</p>
-        <div class="metric" id="threat">LOW</div>
-        <p class="muted">This is a fictional local-only training console.</p>
+    <h2 style="margin-top:25px">RESPONSE ACTIONS</h2>
+    <button id="scan">⌕ Run asset discovery</button>
+    <button id="review">◉ Review active alerts</button>
+    <button id="evidence">▣ Collect endpoint evidence</button>
+    <button id="isolate" class="danger">⊘ Isolate selected node</button>
+    <button id="patch" class="good">✓ Apply security patch</button>
+    <button id="rotate" class="good">↻ Rotate demo credentials</button>
+    <button id="reset">↺ Reset exercise</button>
+  </aside>
 
-        <button id="scanButton">Run simulated security scan</button>
-        <button id="breachButton">Start simulated breach exercise</button>
-
-        <div class="flag" id="flag">
-          Exercise complete — FLAG{LOCAL_SIMULATION_COMPLETE}
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>ACTIVITY TERMINAL</h2>
-        <div id="terminal">[SYSTEM] Sentinel console initialized.
-[SYSTEM] Waiting for operator action...</div>
-      </section>
+  <section>
+    <div class="banner" id="complete">
+      MISSION COMPLETE — Incident contained and the training environment secured.
     </div>
-  </main>
 
-  <script>
-    const terminal = document.getElementById("terminal");
-    const scanButton = document.getElementById("scanButton");
-    const breachButton = document.getElementById("breachButton");
-    const threat = document.getElementById("threat");
-    const flag = document.getElementById("flag");
+    <section class="panel">
+      <h2>NETWORK MAP — select a system for details</h2>
+      <div class="map">
+        <div class="node" data-node="gateway">
+          <div class="name"><span class="dot"></span>EDGE-GATEWAY</div>
+          <small>Firewall / Traffic Monitor</small>
+        </div>
+        <div class="node warning" data-node="web">
+          <div class="name"><span class="dot"></span>WEB-PORTAL</div>
+          <small>Customer-facing demo application</small>
+        </div>
+        <div class="node" data-node="auth">
+          <div class="name"><span class="dot"></span>AUTH-SERVICE</div>
+          <small>Demo identity provider</small>
+        </div>
+        <div class="node compromised" data-node="api">
+          <div class="name"><span class="dot"></span>API-01</div>
+          <small>Internal application API</small>
+        </div>
+        <div class="node" data-node="database">
+          <div class="name"><span class="dot"></span>DATA-VAULT</div>
+          <small>Fictional encrypted records</small>
+        </div>
+        <div class="node" data-node="siem">
+          <div class="name"><span class="dot"></span>SIEM-CONSOLE</div>
+          <small>Security event collection</small>
+        </div>
+      </div>
 
-    function log(message, className = "") {
-      const line = document.createElement("div");
-      line.className = className;
-      line.textContent = message;
-      terminal.appendChild(line);
-      terminal.scrollTop = terminal.scrollHeight;
+      <h2>SELECTED SYSTEM</h2>
+      <div class="detail" id="details">Select a node in the map to inspect its simulated status.</div>
+    </section>
+
+    <section class="panel" style="margin-top:16px">
+      <h2>EVENT TERMINAL</h2>
+      <div id="terminal"></div>
+    </section>
+  </section>
+
+  <aside class="panel">
+    <h2>LIVE ALERTS</h2>
+    <div id="alerts"></div>
+
+    <h2 style="margin-top:24px">SECURITY METRICS</h2>
+    <div class="metric">Threat risk <span id="riskValue">12%</span><div class="bar"><div class="fill" id="riskBar"></div></div></div>
+    <div class="metric">Detection coverage <span id="detectValue">30%</span><div class="bar"><div class="fill" id="detectBar"></div></div></div>
+
+    <p class="detail" style="margin-top:22px">
+      This interface only simulates an incident-response workflow. It does not scan, connect to, or affect any device or website.
+    </p>
+  </aside>
+</main>
+
+<script>
+  const state = {
+    selected: null, scanned: false, reviewed: false, evidence: false,
+    isolated: false, patched: false, rotated: false, score: 0
+  };
+
+  const nodes = {
+    gateway: ["EDGE-GATEWAY", "Traffic normal. Demo firewall rules active."],
+    web: ["WEB-PORTAL", "Warning: unusual simulated request pattern observed."],
+    auth: ["AUTH-SERVICE", "Authentication service stable. No training alerts."],
+    api: ["API-01", "Critical: simulated unauthorized process detected. Investigation required."],
+    database: ["DATA-VAULT", "Encrypted fictional records. Access remains protected."],
+    siem: ["SIEM-CONSOLE", "Collecting simulated telemetry from all nodes."]
+  };
+
+  const terminal = document.getElementById("terminal");
+  const alerts = document.getElementById("alerts");
+
+  function log(text, type="info") {
+    const line = document.createElement("div");
+    line.className = type;
+    line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+    terminal.appendChild(line);
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+
+  function objective(id, complete) {
+    document.getElementById(id).classList.toggle("done", complete);
+  }
+
+  function updateScore(points = 0) {
+    state.score += points;
+    document.getElementById("score").textContent = state.score;
+  }
+
+  function updateRisk() {
+    let risk = 12;
+    if (state.reviewed) risk = 38;
+    if (state.evidence) risk = 26;
+    if (state.isolated) risk = 15;
+    if (state.patched) risk = 7;
+    if (state.rotated) risk = 2;
+
+    document.getElementById("riskValue").textContent = risk + "%";
+    document.getElementById("riskBar").style.width = risk + "%";
+    document.getElementById("riskText").textContent = risk > 25 ? "ELEVATED" : risk > 8 ? "GUARDED" : "SECURE";
+    document.getElementById("riskText").style.color = risk > 25 ? "#ffc857" : risk > 8 ? "#59b7ff" : "#45f5a3";
+
+    const coverage = Math.min(30 + (state.scanned ? 15 : 0) + (state.reviewed ? 15 : 0) + (state.evidence ? 20 : 0) + (state.patched ? 20 : 0), 100);
+    document.getElementById("detectValue").textContent = coverage + "%";
+    document.getElementById("detectBar").style.width = coverage + "%";
+  }
+
+  function renderAlerts() {
+    alerts.innerHTML = `
+      <div class="alert ${state.reviewed ? "resolved" : "critical"}">
+        <strong>CRITICAL</strong><br>API-01: simulated suspicious activity
+      </div>
+      <div class="alert ${state.scanned ? "resolved" : ""}">
+        <strong>MEDIUM</strong><br>WEB-PORTAL: unusual demo traffic
+      </div>
+      <div class="alert ${state.patched ? "resolved" : ""}">
+        <strong>MEDIUM</strong><br>API-01: update awaiting deployment
+      </div>`;
+  }
+
+  function checkComplete() {
+    if (state.scanned && state.reviewed && state.evidence &&
+        state.isolated && state.patched && state.rotated) {
+      document.getElementById("complete").style.display = "block";
+      log("MISSION COMPLETE: incident fully contained in the simulation.", "ok");
     }
+  }
 
-    function wait(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    scanButton.addEventListener("click", async () => {
-      scanButton.disabled = true;
-      log("[SCAN] Checking fictional perimeter...", "line-warn");
-      await wait(700);
-      log("[SCAN] WEB-01: headers present", "line-ok");
-      await wait(550);
-      log("[SCAN] AUTH-02: demo authentication enabled", "line-ok");
-      await wait(550);
-      log("[SCAN] DB-CORE: fictional records protected", "line-ok");
-      await wait(450);
-      log("[SCAN] Result: no real systems were contacted.", "line-ok");
-      scanButton.disabled = false;
+  document.querySelectorAll(".node").forEach(node => {
+    node.addEventListener("click", () => {
+      document.querySelectorAll(".node").forEach(n => n.classList.remove("selected"));
+      node.classList.add("selected");
+      state.selected = node.dataset.node;
+      const [name, detail] = nodes[state.selected];
+      document.getElementById("details").innerHTML =
+        `<strong style="color:#59b7ff">${name}</strong><br>${detail}` +
+        (state.selected === "api" && state.isolated ? "<br><span class='ok'>Status: isolated from simulated network.</span>" : "");
+      log(`Selected system: ${name}`, "info");
     });
+  });
 
-    breachButton.addEventListener("click", async () => {
-      breachButton.disabled = true;
-      threat.textContent = "ELEVATED";
-      threat.style.color = "#ffc857";
+  document.getElementById("scan").onclick = () => {
+    if (state.scanned) return;
+    state.scanned = true;
+    objective("oScan", true);
+    updateScore(100);
+    updateRisk();
+    renderAlerts();
+    log("Asset discovery completed: 6 simulated systems identified.", "ok");
+    log("Discovery highlighted API-01 as the highest-priority system.", "warn");
+  };
 
-      log("[EXERCISE] Starting fictional breach simulation...", "line-warn");
-      await wait(800);
-      log("[SIMULATION] Training access token generated.", "line-warn");
-      await wait(750);
-      log("[SIMULATION] Demo security alert triggered.", "line-danger");
-      await wait(750);
-      log("[SIMULATION] Containment procedure successful.", "line-ok");
-      await wait(500);
-      log("[EXERCISE] Completed safely. No network activity occurred.", "line-ok");
+  document.getElementById("review").onclick = () => {
+    if (!state.scanned) return log("Run asset discovery before reviewing correlated alerts.", "warn");
+    if (state.reviewed) return;
+    state.reviewed = true;
+    objective("oReview", true);
+    updateScore(150);
+    updateRisk();
+    renderAlerts();
+    log("Alert correlation complete: activity is isolated to API-01.", "bad");
+    log("No real service, credential, or network was accessed.", "info");
+  };
 
-      threat.textContent = "LOW";
-      threat.style.color = "#35f28b";
-      flag.style.display = "block";
-      breachButton.textContent = "Simulation completed";
-    });
-  </script>
+  document.getElementById("evidence").onclick = () => {
+    if (!state.reviewed) return log("Review the alert before collecting evidence.", "warn");
+    if (state.evidence) return;
+    state.evidence = true;
+    objective("oEvidence", true);
+    updateScore(200);
+    updateRisk();
+    log("Simulated evidence package collected from API-01.", "ok");
+    log("Finding: outdated demo component requires patching.", "warn");
+  };
+
+  document.getElementById("isolate").onclick = () => {
+    if (state.selected !== "api") return log("Select API-01 to isolate the affected training node.", "warn");
+    if (!state.evidence) return log("Collect evidence before containment.", "warn");
+    if (state.isolated) return;
+    state.isolated = true;
+    document.querySelector('[data-node="api"]').classList.add("isolated");
+    objective("oIsolate", true);
+    updateScore(250);
+    updateRisk();
+    log("API-01 isolated from the simulated network.", "ok");
+  };
+
+  document.getElementById("patch").onclick = () => {
+    if (!state.isolated) return log("Isolate API-01 before applying the simulated patch.", "warn");
+    if (state.patched) return;
+    state.patched = true;
+    objective("oPatch", true);
+    updateScore(250);
+    updateRisk();
+    renderAlerts();
+    log("Security patch applied to simulated API-01 service.", "ok");
+  };
+
+  document.getElementById("rotate").onclick = () => {
+    if (!state.patched) return log("Apply the patch before rotating demo credentials.", "warn");
+    if (state.rotated) return;
+    state.rotated = true;
+    objective("oRotate", true);
+    updateScore(300);
+    updateRisk();
+    log("Demo credentials rotated and fictional sessions invalidated.", "ok");
+    checkComplete();
+  };
+
+  document.getElementById("reset").onclick = () => location.reload();
+
+  renderAlerts();
+  updateRisk();
+  log("Sentinel Lab initialized. Training incident active.", "info");
+  log("Tip: begin with asset discovery, then follow the evidence trail.", "info");
+</script>
 </body>
 </html>
