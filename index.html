@@ -1,301 +1,200 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentinel Security Console</title>
+  <style>
+    :root {
+      --bg: #07110d;
+      --panel: #0d1d16;
+      --green: #35f28b;
+      --warn: #ffc857;
+      --red: #ff5d73;
+      --text: #d9ffe8;
+      --muted: #78a18a;
+    }
 
-    <!-- Makes the website work properly on phones -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    * { box-sizing: border-box; }
 
-    <title>For You, As Always</title>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #123728, var(--bg) 58%);
+      color: var(--text);
+      font: 15px/1.5 Consolas, "Courier New", monospace;
+    }
 
-    <!-- Google Font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 7vw;
+      border-bottom: 1px solid #1c4b34;
+      background: rgba(4, 15, 10, .9);
+    }
 
-    <!-- Our CSS -->
-    <link rel="stylesheet" href="style.css">
+    h1 { margin: 0; font-size: 1.2rem; letter-spacing: .12em; }
+    .status { color: var(--green); }
+    .wrap { max-width: 1100px; margin: 36px auto; padding: 0 20px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 20px;
+    }
+
+    .panel {
+      background: rgba(13, 29, 22, .92);
+      border: 1px solid #245b40;
+      border-radius: 10px;
+      padding: 22px;
+      box-shadow: 0 0 30px rgba(53, 242, 139, .06);
+    }
+
+    h2 { margin-top: 0; font-size: 1rem; color: var(--green); }
+    .metric { font-size: 2rem; font-weight: bold; }
+    .muted { color: var(--muted); }
+
+    .nodes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .node { border: 1px solid #285f44; padding: 12px; border-radius: 7px; }
+    .node small { display: block; color: var(--muted); margin-top: 5px; }
+
+    button {
+      width: 100%;
+      margin-top: 12px;
+      padding: 12px;
+      color: #02120a;
+      font: inherit;
+      font-weight: bold;
+      background: var(--green);
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover { filter: brightness(1.1); }
+    button:disabled { background: #426552; cursor: not-allowed; }
+
+    #terminal {
+      height: 310px;
+      overflow-y: auto;
+      padding: 15px;
+      background: #030a06;
+      border: 1px solid #1d4a34;
+      border-radius: 7px;
+      white-space: pre-wrap;
+    }
+
+    .line-ok { color: var(--green); }
+    .line-warn { color: var(--warn); }
+    .line-danger { color: var(--red); }
+
+    .flag {
+      display: none;
+      margin-top: 18px;
+      padding: 14px;
+      color: #06130b;
+      background: var(--warn);
+      border-radius: 7px;
+      font-weight: bold;
+    }
+
+    @media (max-width: 750px) {
+      .grid { grid-template-columns: 1fr; }
+      .nodes { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
-
 <body>
+  <header>
+    <h1>◈ SENTINEL // SECURITY OPERATIONS</h1>
+    <div class="status">● SYSTEMS ONLINE</div>
+  </header>
 
-    <!-- =====================================================
-         BACKGROUND EFFECT LAYER
-         ===================================================== -->
+  <main class="wrap">
+    <div class="grid">
+      <section class="panel">
+        <h2>NETWORK OVERVIEW</h2>
+        <div class="nodes">
+          <div class="node">WEB-01 <small class="status">● ONLINE</small></div>
+          <div class="node">AUTH-02 <small class="status">● ONLINE</small></div>
+          <div class="node">DB-CORE <small class="status">● ONLINE</small></div>
+        </div>
 
-    <div class="background-effects">
+        <p class="muted">Threat level</p>
+        <div class="metric" id="threat">LOW</div>
+        <p class="muted">This is a fictional local-only training console.</p>
 
-        <!-- These will be animated later with CSS/JavaScript -->
-        <div class="falling-effects" id="fallingEffects"></div>
+        <button id="scanButton">Run simulated security scan</button>
+        <button id="breachButton">Start simulated breach exercise</button>
 
-        <!-- Glowing decorative lines -->
-        <div class="glow-line line-one"></div>
-        <div class="glow-line line-two"></div>
-        <div class="glow-line line-three"></div>
+        <div class="flag" id="flag">
+          Exercise complete — FLAG{LOCAL_SIMULATION_COMPLETE}
+        </div>
+      </section>
 
+      <section class="panel">
+        <h2>ACTIVITY TERMINAL</h2>
+        <div id="terminal">[SYSTEM] Sentinel console initialized.
+[SYSTEM] Waiting for operator action...</div>
+      </section>
     </div>
-
-    <!-- =====================================================
-         OPENING / ENTRANCE SCREEN
-         ===================================================== -->
-
-    <section id="entrance" class="entrance-screen">
-
-        <!-- Floating rose -->
-        <div class="entrance-rose" id="entranceRose">
-            🌹
-        </div>
-
-        <!-- Decorative particles surrounding the heart -->
-        <div class="heart-particles"></div>
-
-        <!-- Main heart entrance -->
-        <button class="heart-entrance" id="beginButton">
-
-            <div class="heart-glow"></div>
-
-            <div class="heart-content">
-
-                <span class="heart-small-text">
-                    A little something
-                </span>
-
-                <h1>
-                    For You
-                </h1>
-
-            </div>
-
-        </button>
-
-        <!-- Instruction -->
-        <p class="tap-text">
-            Tap To Begin
-        </p>
-
-        <!-- Small decorative line -->
-        <div class="entrance-divider">
-            <span></span>
-            <i>♥</i>
-            <span></span>
-        </div>
-
-    </section>
-
-    <!-- =====================================================
-         MAIN WEBSITE
-         Hidden until the heart is clicked
-         ===================================================== -->
-
-    <main id="mainContent" class="main-content">
-
-        <!-- =================================================
-             INTRODUCTION
-             ================================================= -->
-
-        <section class="intro-section">
-
-            <div class="intro-content">
-
-                <p class="eyebrow">
-                    A Letter Written From The Heart
-                </p>
-
-                <h1 class="main-title">
-                    For <span>You</span>, As Always
-                </h1>
-
-                <p class="intro-description">
-                    Some feelings are too honest to keep silent.
-                    This one is for you - read it slowly, with an open heart.
-                </p>
-
-                <!-- Decorative glowing lines -->
-                <div class="intro-lines">
-
-                    <div class="intro-line left"></div>
-
-                    <div class="read-on">
-                        <span>Read on</span>
-                    </div>
-
-                    <div class="intro-line right"></div>
-
-                </div>
-
-                <!-- Down arrow -->
-                <div class="scroll-indicator">
-
-                    <span></span>
-                    <span></span>
-
-                </div>
-
-            </div>
-
-        </section>
-
-        <!-- =================================================
-             CONFESSION SECTION
-             ================================================= -->
-
-        <section id="confession" class="confession-section">
-
-            <!-- Huge faded background text -->
-            <div class="background-title">
-                My Confession
-            </div>
-
-            <div class="confession-content">
-
-                <!-- Section label -->
-                <p class="section-label">
-                    My Confession
-                </p>
-
-                <!-- Main confession heading -->
-                <h2 class="confession-heading">
-                    My Heart had already chosen you
-                    without me even realizing it.
-                </h2>
-
-                <!-- Heart divider -->
-                <div class="heart-divider">
-
-                    <div class="divider-line"></div>
-
-                    <div class="divider-heart">
-                        ♥
-                    </div>
-
-                    <div class="divider-line"></div>
-
-                </div>
-
-                <!-- =========================================
-                     LETTER
-                     ========================================= -->
-
-                <article class="letter">
-
-                    <p class="letter-paragraph reveal-text">
-                        Maging kadete ng Philippine Merchant Marine Academy
-                        Maging kadete ng Philippine Military Academy
-                        Maging kadete ng Philippine National Police Academy
-                        Maging kadete ng Maritime Academy of Asia and the Pacific
-                        Maging 3/O, Lieutenant, ah basta
-                        
-                    </p>
-
-                    <p class="letter-paragraph reveal-text">
-                        2nd paragraph
-                    </p>
-
-                    <p class="letter-paragraph reveal-text">
-                        3rd paragraph
-                    </p>
-
-                    <p class="letter-paragraph reveal-text">
-                        4th paragraph
-                    </p>
-
-                    <p class="letter-paragraph reveal-text">
-                        5h paragraph
-                    </p>
-
-                    <p class="letter-paragraph reveal-text">
-                        6th paragraph
-                    </p>
-
-                    <!-- Hidden message -->
-                    <div class="hidden-message" id="hiddenMessage">
-
-                        <button class="reveal-button" id="revealButton">
-                            There is something else...
-                        </button>
-
-                        <div class="secret-text" id="secretText">
-
-                            <p>
-                                Some words are easier to write than to say.
-                                So here they are, quietly waiting for you.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </article>
-
-                <!-- =========================================
-                     FINAL DIVIDER
-                     ========================================= -->
-
-                <div class="final-divider">
-
-                    <span></span>
-
-                    <div class="divider-symbol">
-                        ✦ ♥ ✦
-                    </div>
-
-                    <span></span>
-
-                </div>
-
-                <!-- =========================================
-                     FINAL MESSAGE
-                     ========================================= -->
-
-                <section class="final-section">
-
-                    <p class="final-message">
-                        With all the sincerity my heart can offer.
-                    </p>
-
-                    <!-- Animated rose -->
-                    <div class="final-rose" id="finalRose">
-                        🌹
-                    </div>
-
-                    <!-- Final signature -->
-                    <p class="signature">
-                        — Brynelle
-                    </p>
-
-                </section>
-
-            </div>
-
-        </section>
-
-        <!-- =================================================
-             FOOTER
-             ================================================= -->
-
-        <footer class="site-footer">
-
-            <p>
-                Made with sincerity, a little courage,
-                and a heart full of words.
-            </p>
-
-            <span>♥</span>
-
-        </footer>
-
-    </main>
-
-    <!-- =====================================================
-         BACKGROUND MUSIC
-         ===================================================== -->
-
-    <audio id="backgroundMusic" loop>
-        <source src="Perfect_music.mp3" type="audio/mpeg">
-    </audio>
-
-    <!-- Our JavaScript -->
-    <script src="script.js"></script>
-
+  </main>
+
+  <script>
+    const terminal = document.getElementById("terminal");
+    const scanButton = document.getElementById("scanButton");
+    const breachButton = document.getElementById("breachButton");
+    const threat = document.getElementById("threat");
+    const flag = document.getElementById("flag");
+
+    function log(message, className = "") {
+      const line = document.createElement("div");
+      line.className = className;
+      line.textContent = message;
+      terminal.appendChild(line);
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    scanButton.addEventListener("click", async () => {
+      scanButton.disabled = true;
+      log("[SCAN] Checking fictional perimeter...", "line-warn");
+      await wait(700);
+      log("[SCAN] WEB-01: headers present", "line-ok");
+      await wait(550);
+      log("[SCAN] AUTH-02: demo authentication enabled", "line-ok");
+      await wait(550);
+      log("[SCAN] DB-CORE: fictional records protected", "line-ok");
+      await wait(450);
+      log("[SCAN] Result: no real systems were contacted.", "line-ok");
+      scanButton.disabled = false;
+    });
+
+    breachButton.addEventListener("click", async () => {
+      breachButton.disabled = true;
+      threat.textContent = "ELEVATED";
+      threat.style.color = "#ffc857";
+
+      log("[EXERCISE] Starting fictional breach simulation...", "line-warn");
+      await wait(800);
+      log("[SIMULATION] Training access token generated.", "line-warn");
+      await wait(750);
+      log("[SIMULATION] Demo security alert triggered.", "line-danger");
+      await wait(750);
+      log("[SIMULATION] Containment procedure successful.", "line-ok");
+      await wait(500);
+      log("[EXERCISE] Completed safely. No network activity occurred.", "line-ok");
+
+      threat.textContent = "LOW";
+      threat.style.color = "#35f28b";
+      flag.style.display = "block";
+      breachButton.textContent = "Simulation completed";
+    });
+  </script>
 </body>
 </html>
